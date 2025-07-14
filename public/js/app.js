@@ -1,3 +1,5 @@
+// public/js/app.js
+
 import { auth } from './firebase/config.js';
 import { 
   fazerLogin, 
@@ -38,7 +40,7 @@ const updateUI = {
         <span class="descricao">${item.descricao}</span>
         <span class="valor">R$ ${item.valor.toFixed(2)}</span>
         <span class="categoria">${item.categoria}</span>
-        <small>${item.data?.toLocaleDateString('pt-BR')}</small>
+        <small>${new Date(item.data).toLocaleDateString('pt-BR')}</small>
       </li>
     `).join('');
   }

@@ -1,41 +1,69 @@
-import { db, auth } from '../firebase/config.js';
+// public/js/export.js
 
-// Exportar para PDF
+import { db, auth } from '../firebase/config.js';
+import {
+  collection,
+  query,
+  where,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/**
+ * Exportar movimentações para PDF usando jsPDF
+ */
 export async function exportToPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  
-  // Captura dados do Firestore
+
   const userId = auth.currentUser?.uid;
-  const snapshot = await db.collection("movimentacoes")
-    .where("userId", "==", userId)
-    .get();
+  if (!userId) {
+    alert("Usuário não autenticado.");
+    return;
+  }
+
+  // Captura dados do Firestore
+  const q = query(
+    collection(db, "movimentacoes"),
+    where("userId", "==", userId)
+  );
+  const snapshot = await getDocs(q);
 
   let content = "Histórico de Movimentações:\n\n";
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    content += `${data.data.toDate().toLocaleDateString()} | ${data.descricao} | R$ ${data.valor}\n`;
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    const dateStr = data.data?.toDate().toLocaleDateString('pt-BR') || '-';
+    content += `${dateStr} | ${data.descricao} | R$ ${data.valor.toFixed(2)}\n`;
   });
 
   doc.text(content, 10, 10);
   doc.save("relatorio-caixa.pdf");
 }
 
-// Exportar para Excel
+/**
+ * Exportar movimentações para Excel usando SheetJS
+ */
 export async function exportToExcel() {
   const XLSX = window.XLSX;
   const userId = auth.currentUser?.uid;
-  const snapshot = await db.collection("movimentacoes")
-    .where("userId", "==", userId)
-    .get();
+  if (!userId) {
+    alert("Usuário não autenticado.");
+    return;
+  }
+
+  const q = query(
+    collection(db, "movimentacoes"),
+    where("userId", "==", userId)
+  );
+  const snapshot = await getDocs(q);
 
   const data = [];
-  snapshot.forEach(doc => {
+  snapshot.forEach(docSnap => {
+    const mov = docSnap.data();
     data.push({
-      Data: doc.data().data.toDate().toLocaleDateString(),
-      Descrição: doc.data().descricao,
-      Valor: doc.data().valor,
-      Tipo: doc.data().tipo
+      Data: mov.data?.toDate().toLocaleDateString('pt-BR') || '-',
+      Descrição: mov.descricao,
+      Valor: mov.valor,
+      Tipo: mov.tipo
     });
   });
 

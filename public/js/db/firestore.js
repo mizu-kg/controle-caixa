@@ -1,37 +1,96 @@
-import { db, storage, serverTimestamp } from '../firebase/config.js';
-import { 
-  collection, doc, addDoc, updateDoc, 
-  query, where, getDocs, getDoc
-} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// public/js/db/firestore.js
 
-// ========== CORE FUNCTIONS ========== //
-export const registrarMovimentacao = async (dados) => {
+import { db, storage } from '../firebase/config.js';
+import { 
+  collection, doc, addDoc, updateDoc, getDocs, query, where, getDoc, orderBy, serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+/**
+ * Registrar movimentação (entrada/saída)
+ */
+export const adicionarMovimentacao = async (tipo, valor, descricao, categoria) => {
   try {
     const docRef = await addDoc(collection(db, "movimentacoes"), {
-      ...dados,
+      tipo,
+      valor: Number(valor),
+      descricao,
+      categoria,
+      data: new Date(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      status: 'pendente' // 'pendente'|'conciliado'|'cancelado'
+      status: 'pendente'
     });
     return docRef.id;
   } catch (error) {
-    console.error("Erro ao registrar:", error);
-    throw new Error("Falha no registro");
+    console.error("Erro ao adicionar movimentação:", error);
+    return null;
   }
 };
 
-// ========== COMPROVANTES ========== //
+/**
+ * Calcular saldo atual
+ */
+export const calcularSaldo = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "movimentacoes"));
+    let saldo = 0;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.tipo === "entrada") saldo += data.valor;
+      else if (data.tipo === "saida") saldo -= data.valor;
+    });
+    return saldo;
+  } catch (error) {
+    console.error("Erro ao calcular saldo:", error);
+    return 0;
+  }
+};
+
+/**
+ * Carregar histórico completo
+ */
+export const carregarHistorico = async () => {
+  try {
+    const q = query(collection(db, "movimentacoes"), orderBy("data", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Erro ao carregar histórico:", error);
+    return [];
+  }
+};
+
+/**
+ * Filtrar por categoria
+ */
+export const filtrarPorCategoria = async (categoria) => {
+  try {
+    const q = query(collection(db, "movimentacoes"), where("categoria", "==", categoria));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Erro ao filtrar por categoria:", error);
+    return [];
+  }
+};
+
+/**
+ * Funções adicionais (exemplo: anexar comprovante)
+ */
 export const anexarComprovante = async (movimentacaoId, arquivo) => {
   try {
-    // 1. Upload do arquivo
     const storageRef = ref(storage, `comprovantes/${movimentacaoId}/${arquivo.name}`);
     await uploadBytes(storageRef, arquivo);
-    
-    // 2. Obter URL pública
+
     const url = await getDownloadURL(storageRef);
-    
-    // 3. Atualizar movimentação
+
     await updateDoc(doc(db, "movimentacoes", movimentacaoId), {
       comprovante: {
         url,
@@ -40,52 +99,10 @@ export const anexarComprovante = async (movimentacaoId, arquivo) => {
         dataUpload: serverTimestamp()
       }
     });
-    
+
     return url;
   } catch (error) {
-    console.error("Erro no comprovante:", error);
-    throw new Error("Falha ao anexar comprovante");
+    console.error("Erro ao anexar comprovante:", error);
+    return null;
   }
-};
-
-// ========== CAIXA DIÁRIO ========== //
-export const abrirCaixa = async (valorInicial, usuarioId) => {
-  const data = new Date().toISOString().split('T')[0];
-  
-  await addDoc(collection(db, "caixa"), {
-    data,
-    saldoInicial: Number(valorInicial),
-    usuarioId,
-    abertoEm: serverTimestamp(),
-    fechadoEm: null,
-    saldoFinal: null,
-    observacoes: ""
-  });
-};
-
-export const fecharCaixa = async (saldoFinal, observacoes) => {
-  const data = new Date().toISOString().split('T')[0];
-  const caixaRef = doc(db, "caixa", data);
-  
-  await updateDoc(caixaRef, {
-    saldoFinal: Number(saldoFinal),
-    fechadoEm: serverTimestamp(),
-    observacoes,
-    status: 'fechado'
-  });
-};
-
-// ========== RELATÓRIOS ========== //
-export const gerarFluxoCaixa = async (periodo) => {
-  const q = query(
-    collection(db, "movimentacoes"),
-    where("data", ">=", periodo.inicio),
-    where("data", "<=", periodo.fim)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
 };
