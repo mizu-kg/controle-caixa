@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lançamentos - Controle de Caixa</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .sidebar {
+      width: 220px;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #343a40;
+      padding-top: 1rem;
+    }
+    .sidebar a {
+      color: #ddd;
+      padding: 0.75rem 1.25rem;
+      display: block;
+      text-decoration: none;
+    }
+    .sidebar a:hover {
+      background-color: #495057;
+      color: white;
+    }
+    .content {
+      margin-left: 220px;
+      padding: 2rem;
+    }
+    .logout-btn {
+      position: absolute;
+      bottom: 1rem;
+      width: 90%;
+      margin-left: 5%;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar d-flex flex-column">
+    <h4 class="text-white text-center mb-4">Controle de Caixa</h4>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="relatorios.html">Relatórios</a>
+    <a href="usuarios.html">Usuários</a>
+    <a href="lancamentos.html" class="active">Lançamentos</a>
+    <a href="uploads.html">Uploads</a>
+    <a href="configuracoes.html">Configurações</a>
+    <button id="logout-btn" class="btn btn-danger logout-btn">Sair</button>
+  </nav>
+
+  <main class="content">
+    <h1>Lançamentos</h1>
+
+    <form id="lancamento-form" class="mb-4">
+      <div class="mb-3">
+        <label for="descricao" class="form-label">Descrição</label>
+        <input type="text" id="descricao" class="form-control" required />
+      </div>
+      <div class="mb-3">
+        <label for="valor" class="form-label">Valor (R$)</label>
+        <input type="number" step="0.01" id="valor" class="form-control" required />
+      </div>
+      <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo</label>
+        <select id="tipo" class="form-select" required>
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="data" class="form-label">Data</label>
+        <input type="date" id="data" class="form-control" required />
+      </div>
+      <button type="submit" class="btn btn-primary">Adicionar Lançamento</button>
+    </form>
+
+    <h2>Últimos Lançamentos</h2>
+
+    <div class="mb-3">
+      <button id="export-pdf" class="btn btn-danger me-2">Exportar PDF</button>
+      <button id="export-excel" class="btn btn-success">Exportar Excel</button>
+    </div>
+
+    <table class="table table-striped" id="lancamentos-table">
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Valor (R$)</th>
+          <th>Tipo</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- libs para exportação -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+
+  <script type="module">
+    import { auth, db } from './js/firebase/config.js';
+    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { collection, addDoc, query, orderBy, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const logoutBtn = document.getElementById('logout-btn');
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+        window.location.href = 'index.html';
+      } catch (error) {
+        alert('Erro ao fazer logout: ' + error.message);
+      }
+    });
+
+    const form = document.getElementById('lancamento-form');
+    const tbody = document.querySelector('#lancamentos-table tbody');
+    const exportPdfBtn = document.getElementById('export-pdf');
+    const exportExcelBtn = document.getElementById('export-excel');
+
+    // Set default date as today
+    document.getElementById('data').valueAsDate = new Date();
+
+    let lancamentosCache = [];
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const descricao = document.getElementById('descricao').value.trim();
+      const valor = parseFloat(document.getElementById('valor').value);
+      const tipo = document.getElementById('tipo').value;
+      const dataStr = document.getElementById('data').value;
+
+      if (!descricao || isNaN(valor) || !tipo || !dataStr) {
+        alert('Preencha todos os campos corretamente');
+        return;
+      }
+
+      const dataTimestamp = Timestamp.fromDate(new Date(dataStr + 'T00:00:00'));
+
+      try {
+        await addDoc(collection(db, "lancamentos"), {
+          descricao,
+          valor,
+          tipo,
+          createdAt: dataTimestamp,
+          userId: auth.currentUser.uid
+        });
+        form.reset();
+        document.getElementById('data').valueAsDate = new Date(); // reset date to today
+      } catch (error) {
+        alert('Erro ao adicionar lançamento: ' + error.message);
+      }
+    });
+
+    // Atualiza a tabela em tempo real e cacheia dados
+    const lancamentosQuery = query(
+      collection(db, "lancamentos"),
+      orderBy("createdAt", "desc")
+    );
+
+    onSnapshot(lancamentosQuery, (snapshot) => {
+      tbody.innerHTML = "";
+      lancamentosCache = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        lancamentosCache.push(data);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${data.descricao}</td>
+          <td>${data.valor.toFixed(2)}</td>
+          <td>${data.tipo.charAt(0).toUpperCase() + data.tipo.slice(1)}</td>
+          <td>${data.createdAt.toDate().toLocaleDateString()}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+
+    // Exportar PDF
+    exportPdfBtn.addEventListener('click', () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.text("Relatório de Lançamentos", 14, 22);
+
+      const columns = ["Descrição", "Valor (R$)", "Tipo", "Data"];
+      const rows = lancamentosCache.map(l => [
+        l.descricao,
+        l.valor.toFixed(2),
+        l.tipo.charAt(0).toUpperCase() + l.tipo.slice(1),
+        l.createdAt.toDate().toLocaleDateString()
+      ]);
+
+      // @ts-ignore
+      doc.autoTable({
+        head: [columns],
+        body: rows,
+        startY: 30
+      });
+
+      doc.save("relatorio_lancamentos.pdf");
+    });
+
+    // Exportar Excel
+    exportExcelBtn.addEventListener('click', () => {
+      const wb = XLSX.utils.book_new();
+      const wsData = [
+        ["Descrição", "Valor (R$)", "Tipo", "Data"],
+        ...lancamentosCache.map(l => [
+          l.descricao,
+          l.valor,
+          l.tipo,
+          l.createdAt.toDate().toLocaleDateString()
+        ])
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      XLSX.utils.book_append_sheet(wb, ws, "Lançamentos");
+      XLSX.writeFile(wb, "relatorio_lancamentos.xlsx");
+    });
+  </script>
+
+  <!-- Import plugin jsPDF AutoTable (necessário para tabela) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+</body>
+</html>

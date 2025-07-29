@@ -1,0 +1,14 @@
+{
+  "usuarios": [
+    {
+      "id": "abc123",
+      "data": { "nome": "Empresa A", "email": "a@a.com" }
+    }
+  ],
+  "lancamentos": [
+    {
+      "id": "def456",
+      "data": { "descricao": "Venda", "valor": 200 }
+    }
+  ]
+}

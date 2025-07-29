@@ -1,225 +1,144 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Controle de Caixa Avançado</title>
-  <link rel="stylesheet" href="./css/style.css">
-  <!-- Chart.js para gráficos -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- jsPDF e SheetJS para exportação -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Controle de Caixa</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      background: linear-gradient(135deg, #4e73df, #224abe);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+
+    .login-container {
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .login-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      padding: 2rem;
+      width: 100%;
+      max-width: 400px;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: slideUp 0.8s forwards;
+    }
+
+    .login-card h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #4e73df;
+      font-weight: 600;
+    }
+
+    .form-control {
+      border-radius: 6px;
+    }
+
+    .btn-primary {
+      background-color: #4e73df;
+      border: none;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: #2e59d9;
+    }
+
+    p {
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    p a {
+      color: #4e73df;
+      text-decoration: none;
+    }
+
+    p a:hover {
+      text-decoration: underline;
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      opacity: 0.95;
+      z-index: 9999;
+    }
+
+    .toast.success { background-color: #28a745; }
+    .toast.error { background-color: #dc3545; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    footer {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      color: #ddd;
+      font-size: 0.85rem;
+    }
+  </style>
 </head>
+
 <body>
-  <div class="container">
-    <!-- Seção de Login -->
-    <div id="login-section">
+
+  <div class="login-container">
+    <div class="login-card">
       <h1>Controle de Caixa</h1>
-      <input type="email" id="email" placeholder="Email" required>
-      <input type="password" id="password" placeholder="Senha" required>
-      <button id="login-btn">Entrar</button>
-      <button id="signup-btn">Cadastrar</button>
-    </div>
 
-    <!-- Seção Principal (após login) -->
-    <div id="app-section" style="display: none;">
-      <!-- Dashboard -->
-      <div class="dashboard">
-        <h2>Saldo: R$ <span id="saldo">0.00</span></h2>
-        <div class="actions">
-          <button id="export-pdf">Exportar PDF</button>
-          <button id="export-excel">Exportar Excel</button>
+      <!-- Formulário de Login -->
+      <form id="login-form">
+        <div class="mb-3">
+          <input type="email" id="login-email" class="form-control" placeholder="Email" required />
         </div>
-      </div>
-
-      <!-- Formulário de Movimentação -->
-      <form id="movimentacao-form">
-        <select id="tipo" required>
-          <option value="" disabled selected>Selecione o tipo</option>
-          <option value="entrada">Entrada</option>
-          <option value="saida">Saída</option>
-        </select>
-        <input type="number" id="valor" placeholder="Valor (R$)" step="0.01" min="0.01" required>
-        <input type="text" id="descricao" placeholder="Descrição" required>
-        <select id="categoria" required>
-          <option value="" disabled selected>Selecione a categoria</option>
-          <option value="Alimentação">Alimentação</option>
-          <option value="Transporte">Transporte</option>
-          <option value="Salário">Salário</option>
-          <option value="Outros">Outros</option>
-        </select>
-        <button type="submit">Registrar</button>
+        <div class="mb-3">
+          <input type="password" id="login-password" class="form-control" placeholder="Senha" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Entrar</button>
       </form>
 
-      <!-- Gráfico -->
-      <div class="chart-container">
-        <canvas id="cashflow-chart"></canvas>
-      </div>
+      <p>Não possui cadastro? <a href="signup.html">Cadastre-se</a></p>
+      <p><a href="recuperar.html">Esqueceu a senha?</a></p>
 
-      <!-- Histórico -->
-      <div class="historico">
-        <h3>Histórico por Categoria</h3>
-        <select id="filter-category">
-          <option value="Todas">Todas</option>
-          <option value="Alimentação">Alimentação</option>
-          <option value="Transporte">Transporte</option>
-          <option value="Salário">Salário</option>
-          <option value="Outros">Outros</option>
-        </select>
-        <ul id="historico-list"></ul>
-      </div>
-
-      <!-- Seção Admin (apenas para usuários com permissão) -->
-      <div id="admin-section" style="display: none;">
-        <h3>Painel Administrativo</h3>
-        <button id="manage-users">Gerenciar Usuários</button>
-      </div>
+      <div id="message"></div>
     </div>
   </div>
 
-  <!-- Firebase e Módulos -->
-  <script type="module">
-    // Importações
-    import { auth } from './js/firebase/config.js';
-    import { fazerLogin, cadastrarUsuario, verificarPermissao } from './js/auth/auth.js';
-    import { adicionarMovimentacao, carregarHistorico, filtrarPorCategoria, calcularSaldo } from './js/db/firestore.js';
-
-    // Elementos DOM
-    const elements = {
-      loginSection: document.getElementById("login-section"),
-      appSection: document.getElementById("app-section"),
-      adminSection: document.getElementById("admin-section"),
-      loginBtn: document.getElementById("login-btn"),
-      signupBtn: document.getElementById("signup-btn"),
-      movimentacaoForm: document.getElementById("movimentacao-form"),
-      saldoElement: document.getElementById("saldo"),
-      historicoList: document.getElementById("historico-list"),
-      categoryFilter: document.getElementById("filter-category"),
-      exportPdfBtn: document.getElementById("export-pdf"),
-      exportExcelBtn: document.getElementById("export-excel")
-    };
-
-    // Funções de UI
-    const updateUI = {
-      historico: (movimentacoes) => {
-        elements.historicoList.innerHTML = movimentacoes.map(item => `
-          <li class="${item.tipo}">
-            <span class="descricao">${item.descricao}</span>
-            <span class="valor">R$ ${item.valor.toFixed(2)}</span>
-            <span class="categoria">${item.categoria}</span>
-            <small>${item.data?.toLocaleDateString('pt-BR') || ''}</small>
-          </li>
-        `).join('');
-      },
-      
-      saldo: async () => {
-        const saldo = await calcularSaldo();
-        elements.saldoElement.textContent = saldo.toFixed(2);
-        elements.saldoElement.style.color = saldo >= 0 ? 'green' : 'red';
-      }
-    };
-
-    // Event Listeners
-    elements.loginBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value;
-      const senha = document.getElementById("password").value;
-      
-      if (await fazerLogin(email, senha)) {
-        elements.loginSection.style.display = "none";
-        elements.appSection.style.display = "block";
-        
-        if (await verificarPermissao(auth.currentUser.uid)) {
-          elements.adminSection.style.display = "block";
-        }
-        
-        await updateUI.saldo();
-        const historico = await carregarHistorico();
-        updateUI.historico(historico);
-      }
-    });
-
-    elements.signupBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value;
-      const senha = document.getElementById("password").value;
-      
-      if (await cadastrarUsuario(email, senha)) {
-        alert("Cadastro realizado! Verifique seu e-mail.");
-        document.getElementById("email").value = "";
-        document.getElementById("password").value = "";
-      }
-    });
-
-    elements.movimentacaoForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const tipo = document.getElementById("tipo").value;
-      const valor = document.getElementById("valor").value;
-      const descricao = document.getElementById("descricao").value;
-      const categoria = document.getElementById("categoria").value;
-
-      if (await adicionarMovimentacao(tipo, valor, descricao, categoria)) {
-        elements.movimentacaoForm.reset();
-        await updateUI.saldo();
-        const historico = await carregarHistorico();
-        updateUI.historico(historico);
-      }
-    });
-
-    elements.categoryFilter.addEventListener("change", async () => {
-      const categoria = elements.categoryFilter.value;
-      const movimentacoes = categoria === "Todas"
-        ? await carregarHistorico()
-        : await filtrarPorCategoria(categoria);
-      updateUI.historico(movimentacoes);
-    });
-
-    // Inicialização do Firebase Auth
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        elements.loginSection.style.display = "none";
-        elements.appSection.style.display = "block";
-        
-        if (await verificarPermissao(user.uid)) {
-          elements.adminSection.style.display = "block";
-        }
-        
-        await updateUI.saldo();
-        const historico = await carregarHistorico();
-        updateUI.historico(historico);
-      }
-    });
-
-    // Função temporária para gráfico (substitua pela sua implementação)
-    function renderCashFlowChart() {
-      const ctx = document.getElementById('cashflow-chart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Jan', 'Fev', 'Mar'],
-          datasets: [{
-            label: 'Entradas',
-            data: [1000, 2000, 1500],
-            backgroundColor: 'green'
-          }, {
-            label: 'Saídas',
-            data: [700, 1500, 800],
-            backgroundColor: 'red'
-          }]
-        }
-      });
-    }
-    renderCashFlowChart();
-
-    // Funções temporárias de exportação (substitua pelas suas implementações)
-    elements.exportPdfBtn.addEventListener("click", () => {
-      alert("PDF exportado (simulação)");
-    });
-    
-    elements.exportExcelBtn.addEventListener("click", () => {
-      alert("Excel exportado (simulação)");
-    });
-  </script>
+  <footer>
+    &copy; 2025 Controle de Caixa. Todos os direitos reservados.
+  </footer>
+  
+  <script type="module" src="./js/login.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

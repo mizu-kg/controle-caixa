@@ -1,0 +1,40 @@
+{
+  "name": "controle-caixa",
+  "version": "1.0.0",
+  "description": "Sistema de controle de caixa com Firebase",
+  "main": "public/js/app.js",
+  "scripts": {
+    "dev": "vite",
+    "start": "http-server ./public -p 8080 -o",
+    "build": "vite build",
+    "preview": "vite preview",
+    "firebase-serve": "firebase serve",
+    "firebase-deploy": "firebase deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mizu-kg/controle-caixa.git"
+  },
+  "keywords": [
+    "controle-caixa",
+    "financeiro",
+    "firebase"
+  ],
+  "author": "Seu Nome",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/mizu-kg/controle-caixa/issues"
+  },
+  "homepage": "https://github.com/mizu-kg/controle-caixa#readme",
+  "dependencies": {
+    "chart.js": "^4.5.0",
+    "firebase": "^11.10.0",
+    "jspdf": "^3.0.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "vite": "^7.0.4"
+  }
+}

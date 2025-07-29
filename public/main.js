@@ -1,48 +1,53 @@
 import { auth } from './firebase/config.js';
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-import { CaixaDiario } from './modules/caixa.js';
-import { Dashboard } from './ui/dashboard.js';
+import { 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// ===================
-// 🚀 Inicialização
-// ===================
 document.addEventListener('DOMContentLoaded', () => {
-  // 🔐 Verifica autenticação do usuário
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        await Dashboard.atualizarSaldo();
-        await Dashboard.carregarUltimasMovimentacoes();
-      } catch (error) {
-        console.error("[Dashboard] Erro ao carregar dados:", error);
-      }
-    } else {
-      console.log("[Auth] Usuário não autenticado");
-      // Opcional: redirecionar para tela de login
-    }
-  });
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
 
-  // ➡️ Botão fechar caixa
-  const btnFecharCaixa = document.getElementById('btn-fechar-caixa');
-  if (btnFecharCaixa) {
-    btnFecharCaixa.addEventListener('click', async () => {
-      const input = prompt("Informe o saldo final:");
-      const saldoFinal = parseFloat(input);
-
-      if (isNaN(saldoFinal)) {
-        alert("Valor inválido. Tente novamente.");
-        return;
-      }
+  // Cadastro
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
 
       try {
-        await CaixaDiario.fecharCaixa(saldoFinal);
-        alert("Caixa fechado com sucesso!");
+        await createUserWithEmailAndPassword(auth, email, password);
+        showToast('Cadastro realizado com sucesso!', 'success');
+        window.location.href = 'dashboard.html';
       } catch (error) {
-        console.error("[Caixa] Erro ao fechar caixa:", error);
-        alert("Erro ao fechar caixa. Consulte o console.");
+        showToast(error.message, 'error');
       }
     });
-  } else {
-    console.warn("[Init] Botão 'btn-fechar-caixa' não encontrado no DOM.");
+  }
+
+  // Login
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        showToast('Login realizado com sucesso!', 'success');
+        window.location.href = 'dashboard.html';
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
   }
 });
+
+// Função toast simples
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
